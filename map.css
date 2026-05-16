@@ -20,10 +20,17 @@ html, body {
 
 circle {
   pointer-events: auto;
-  fill: steelblue;
   fill-opacity: 0.6;
   stroke: white;
   stroke-width: 1;
+  --color-departures: steelblue;
+  --color-arrivals: darkorange;
+  --color: color-mix(
+    in oklch,
+    var(--color-departures) calc(100% * var(--departure-ratio)),
+    var(--color-arrivals)
+  );
+  fill: var(--color);
 }
 
 header {
@@ -43,4 +50,25 @@ header label {
 #any-time {
   color: gray;
   font-style: italic;
+}
+
+.legend {
+  display: flex;
+  gap: 1px;
+  margin-block: 1em;
+}
+
+.legend > div {
+  flex: 1;
+  padding: 0.5em 1em;
+  text-align: center;
+  --color-departures: steelblue;
+  --color-arrivals: darkorange;
+  --color: color-mix(
+    in oklch,
+    var(--color-departures) calc(100% * var(--departure-ratio)),
+    var(--color-arrivals)
+  );
+  background-color: var(--color);
+  color: white;
 }
