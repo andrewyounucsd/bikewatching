@@ -1,8 +1,6 @@
 import mapboxgl from 'https://cdn.jsdelivr.net/npm/mapbox-gl@2.15.0/+esm';
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 
-console.log('Mapbox GL JS Loaded:', mapboxgl);
-
 mapboxgl.accessToken = 'pk.eyJ1IjoiYXN5b3VuIiwiYSI6ImNtcDdwdjZjMDA0ZzEydXBvenk3MTRjejYifQ.h_aI0GxCLMjcp7joEHDZ_Q';
 
 const map = new mapboxgl.Map({
@@ -13,6 +11,14 @@ const map = new mapboxgl.Map({
   minZoom: 5,
   maxZoom: 18,
 });
+
+const svg = d3.select('#map').select('svg');
+
+function getCoords(station) {
+  const point = new mapboxgl.LngLat(+station.lon, +station.lat);
+  const { x, y } = map.project(point);
+  return { cx: x, cy: y };
+}
 
 map.on('load', async () => {
   // Boston bike lanes
@@ -48,38 +54,54 @@ map.on('load', async () => {
       'line-opacity': 0.4,
     },
   });
-});
 
-const svg = d3.select('#map').select('svg');
-
+  // Stations
   let jsonData;
   try {
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
     jsonData = await d3.json(jsonurl);
-    console.log('Loaded JSON Data:', jsonData);
   } catch (error) {
     console.error('Error loading JSON:', error);
   }
 
   let stations = jsonData.data.stations;
-  console.log('Stations Array:', stations);
 
-  function getCoords(station) {
-    const point = new mapboxgl.LngLat(+station.lon, +station.lat);
-    const { x, y } = map.project(point);
-    return { cx: x, cy: y };
-  }
+  // Traffic data
+  const trips = await d3.csv(
+    'https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv',
+    (trip) => {
+      trip.started_at = new Date(trip.started_at);
+      trip.ended_at = new Date(trip.ended_at);
+      return trip;
+    },
+  );
+
+  const departures = d3.rollup(trips, (v) => v.length, (d) => d.start_station_id);
+  const arrivals = d3.rollup(trips, (v) => v.length, (d) => d.end_station_id);
+
+  stations = stations.map((station) => {
+    let id = station.short_name;
+    station.arrivals = arrivals.get(id) ?? 0;
+    station.departures = departures.get(id) ?? 0;
+    station.totalTraffic = station.arrivals + station.departures;
+    return station;
+  });
+
+  const radiusScale = d3
+    .scaleSqrt()
+    .domain([0, d3.max(stations, (d) => d.totalTraffic)])
+    .range([0, 25]);
 
   const circles = svg
     .selectAll('circle')
     .data(stations, (d) => d.short_name)
     .enter()
     .append('circle')
-    .attr('r', 5)
+    .attr('r', (d) => radiusScale(d.totalTraffic))
     .each(function(d) {
       d3.select(this)
         .append('title')
-        .text(`${d.totalTraffic} trips`);
+        .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
     });
 
   function updatePositions() {
@@ -94,3 +116,4 @@ const svg = d3.select('#map').select('svg');
   map.on('zoom', updatePositions);
   map.on('resize', updatePositions);
   map.on('moveend', updatePositions);
+});
