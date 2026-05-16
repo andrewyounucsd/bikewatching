@@ -49,3 +49,48 @@ map.on('load', async () => {
     },
   });
 });
+
+const svg = d3.select('#map').select('svg');
+
+  let jsonData;
+  try {
+    const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
+    jsonData = await d3.json(jsonurl);
+    console.log('Loaded JSON Data:', jsonData);
+  } catch (error) {
+    console.error('Error loading JSON:', error);
+  }
+
+  let stations = jsonData.data.stations;
+  console.log('Stations Array:', stations);
+
+  function getCoords(station) {
+    const point = new mapboxgl.LngLat(+station.lon, +station.lat);
+    const { x, y } = map.project(point);
+    return { cx: x, cy: y };
+  }
+
+  const circles = svg
+    .selectAll('circle')
+    .data(stations, (d) => d.short_name)
+    .enter()
+    .append('circle')
+    .attr('r', 5)
+    .each(function(d) {
+      d3.select(this)
+        .append('title')
+        .text(`${d.totalTraffic} trips`);
+    });
+
+  function updatePositions() {
+    circles
+      .attr('cx', (d) => getCoords(d).cx)
+      .attr('cy', (d) => getCoords(d).cy);
+  }
+
+  updatePositions();
+
+  map.on('move', updatePositions);
+  map.on('zoom', updatePositions);
+  map.on('resize', updatePositions);
+  map.on('moveend', updatePositions);
