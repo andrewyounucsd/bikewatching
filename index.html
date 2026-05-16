@@ -11,10 +11,18 @@
     <link rel="stylesheet" href="map.css" />
   </head>
   <body>
+  <header>
     <h1>🚴 Bikewatching</h1>
-    <p>An interactive map visualization of bike traffic in the Boston area.</p>
-    <div id="map">
-        <svg></svg>
-    </div>
-  </body>
+    <label>
+      Filter by time:
+      <input id="time-slider" type="range" min="-1" max="1440" value="-1" />
+      <time id="selected-time"></time>
+      <em id="any-time">(any time)</em>
+    </label>
+  </header>
+  <p>An interactive map visualization of bike traffic in the Boston area.</p>
+  <div id="map">
+    <svg></svg>
+  </div>
+</body>
 </html>
